@@ -37,7 +37,14 @@ model = Qwen3TTSModel.from_pretrained(
 print("⏳ Loading Voice...")
 voice_data = safetensors.torch.load_file(VOICE_FILE)
 prompt = {k: (v.to(device) if isinstance(v, torch.Tensor) else v) for k, v in voice_data.items()}
+
+if "x_vector_only_mode" not in prompt:
+    prompt["x_vector_only_mode"] = [False]
+if "icl_mode" not in prompt:
+    prompt["icl_mode"] = [False]
+
 print(f"✅ Loaded voice prompt with keys: {list(prompt.keys())}")
+
 
 app = FastAPI()
 class Req(BaseModel): text: str
