@@ -34,18 +34,6 @@ model = Qwen3TTSModel.from_pretrained(
     device_map=device
     )
 
-if device == "cuda":
-    # compile the model for faster inference
-    model = torch.compile(model, mode="reduce-overhead", fullgraph=True)
-    print("🔥 Warming up model...")
-    with torch.no_grad():
-        _ = model.generate_voice_clone(
-            voice_clone_prompt={"input_ids": torch.zeros(1, 10, dtype=torch.long, device=device)},
-            text="warm up"
-        )
-    torch.cuda.synchronize()
-    print("✅ Warm-up done")
-
 print("⏳ Loading Voice...")
 voice_data = safetensors.torch.load_file(VOICE_FILE)
 prompt = {}
