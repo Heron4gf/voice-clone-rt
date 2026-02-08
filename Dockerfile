@@ -10,8 +10,6 @@ RUN apt-get update && apt-get install -y \
 
 RUN git clone https://github.com/QwenLM/Qwen3-TTS.git /app/Qwen3-TTS
 WORKDIR /app/Qwen3-TTS
-
-RUN pip install bitsandbytes>=0.45.0
 RUN pip install --no-cache-dir -e .
 RUN pip install --no-cache-dir fastapi uvicorn python-multipart soundfile safetensors requests
 

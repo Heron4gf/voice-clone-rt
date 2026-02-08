@@ -26,7 +26,7 @@ if not os.path.exists(VOICE_FILE):
         print("❌ No voice file and no VOICE_URL env var set."); sys.exit(1)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-model_id = os.environ.get("MODEL_ID", "Qwen/Qwen3-TTS-12Hz-0.6B-Base")
+model_id = model_id = os.environ["MODEL_ID"]
 print(f"⏳ Loading Model {model_id} on {device}...")
 model = Qwen3TTSModel.from_pretrained(
     model_id, 
@@ -36,15 +36,8 @@ model = Qwen3TTSModel.from_pretrained(
 
 print("⏳ Loading Voice...")
 voice_data = safetensors.torch.load_file(VOICE_FILE)
-prompt = {}
-for k, v in voice_data.items():
-    if isinstance(v, torch.Tensor):
-        v = v.to(device)
-        if v.ndim == 1: v = v.unsqueeze(0)
-        elif v.ndim == 2 and "id" not in k and "mask" not in k: v = v.unsqueeze(0)
-    prompt[k] = v
-prompt["x_vector_only_mode"] = [False]
-prompt["icl_mode"] = [False]
+prompt = {k: (v.to(device) if isinstance(v, torch.Tensor) else v) for k, v in voice_data.items()}
+print(f"✅ Loaded voice prompt with keys: {list(prompt.keys())}")
 
 app = FastAPI()
 class Req(BaseModel): text: str
@@ -54,7 +47,12 @@ def tts(r: Req):
     try:
         print(f"Received text: {r.text}")  # Debug
         with torch.no_grad():
-            wavs, sr = model.generate_voice_clone(voice_clone_prompt=prompt, text=r.text)
+            wavs, sr = model.generate_voice_clone(
+                voice_clone_prompt=prompt,
+                text=r.text,
+                language="English",
+            )
+
             audio = wavs[0].float().cpu().numpy() if isinstance(wavs[0], torch.Tensor) else wavs[0]
             buf = io.BytesIO()
             sf.write(buf, audio, sr, format="WAV")
