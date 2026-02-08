@@ -34,6 +34,6 @@ env = os.environ.copy()
 env["HOST"] = "0.0.0.0"
 env["PORT"] = "8000"
 env["TTS_MODEL_NAME"] = "Qwen/Qwen3-TTS-12Hz-1.7B-Base" 
-env["TTS_BACKEND"] = "official" # Usa Flash Attention 2 automaticamente
+env["TTS_BACKEND"] = "official" # Use Flash Attention 2 automatically
 
 subprocess.run(cmd, env=env)
