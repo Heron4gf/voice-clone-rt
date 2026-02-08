@@ -31,8 +31,7 @@ print(f"⏳ Loading Model {model_id} on {device}...")
 model = Qwen3TTSModel.from_pretrained(
     model_id, 
     dtype=torch.float16, 
-    device_map=device,
-    attn_implementation="flash_attention_2", # use flash attention for faster inference (if supported by your GPU)
+    device_map=device
     )
 
 if device == "cuda":
