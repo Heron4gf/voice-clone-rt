@@ -65,14 +65,19 @@ class Req(BaseModel): text: str
 @app.post("/tts")
 def tts(r: Req):
     try:
+        print(f"Received text: {r.text}")  # Debug
         with torch.no_grad():
             wavs, sr = model.generate_voice_clone(voice_clone_prompt=prompt, text=r.text)
             audio = wavs[0].float().cpu().numpy() if isinstance(wavs[0], torch.Tensor) else wavs[0]
             buf = io.BytesIO()
             sf.write(buf, audio, sr, format="WAV")
             buf.seek(0)
+            print(f"Generated {len(audio)} samples at {sr}Hz")  # Debug
             return StreamingResponse(buf, media_type="audio/wav")
     except Exception as e:
+        print(f"ERROR: {e}")  # Questo apparirà nei log Docker
+        import traceback
+        traceback.print_exc()  # Stack trace completo
         raise HTTPException(500, str(e))
 
 if __name__ == "__main__":
