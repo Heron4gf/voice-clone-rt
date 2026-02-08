@@ -1,18 +1,17 @@
-FROM pytorch/pytorch:2.4.0-cuda12.1-cudnn9-devel
+FROM pytorch/pytorch:2.4.0-cuda12.1-cudnn9-runtime
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y git curl sox libsox-dev build-essential && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    git curl sox libsox-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir flash-attn --no-build-isolation
+RUN git clone https://github.com/QwenLM/Qwen3-TTS.git /app/Qwen3-TTS
+WORKDIR /app/Qwen3-TTS
+RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir fastapi uvicorn python-multipart soundfile safetensors requests
 
-RUN git clone https://github.com/groxaxo/Qwen3-TTS-Openai-Fastapi.git .
-
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir requests
-
-COPY start.py /app/start.py
+COPY server.py /app/Qwen3-TTS/server.py
 
 EXPOSE 8000
-
-CMD ["python", "start.py"]
+CMD ["python", "server.py"]
