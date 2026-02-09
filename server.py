@@ -49,13 +49,15 @@ for k, v in voice_data.items():
     else:
         prompt[k] = v
 
+prompt["prompt_text"] = ["""The Lost Key
+Leo was a quiet boy who lived in a small house near the forest. Every morning, he walked to the old oak tree to read his favorite book. One sunny Tuesday, Leo reached into his pocket and felt a cold shiver. His house key was gone."""]
+
 if "x_vector_only_mode" not in prompt:
     prompt["x_vector_only_mode"] = [False]
 if "icl_mode" not in prompt:
     prompt["icl_mode"] = [False]
 
 print(f"✅ Loaded voice prompt keys: {list(prompt.keys())}")
-
 
 app = FastAPI()
 class Req(BaseModel): text: str
