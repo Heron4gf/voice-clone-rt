@@ -5,11 +5,14 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import uvicorn
 
+
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
-VOICE_URL = os.environ.get("VOICE_URL") # URL from Docker env var, e.g. "https://huggingface.co/your-username/your-repo/resolve/main/voice.safetensors"
+
+VOICE_URL = os.environ.get("VOICE_URL")
 VOICE_FILE = "voice.safetensors"
+
 
 if not os.path.exists(VOICE_FILE):
     if VOICE_URL:
@@ -18,54 +21,63 @@ if not os.path.exists(VOICE_FILE):
             with requests.get(VOICE_URL, stream=True) as r:
                 r.raise_for_status()
                 with open(VOICE_FILE, 'wb') as f:
-                    for chunk in r.iter_content(chunk_size=8192): f.write(chunk)
+                    for chunk in r.iter_content(chunk_size=8192): 
+                        f.write(chunk)
             print("✅ Download done.")
         except Exception as e:
-            print(f"❌ Download failed: {e}"); sys.exit(1)
+            print(f"❌ Download failed: {e}")
+            sys.exit(1)
     else:
-        print("❌ No voice file and no VOICE_URL env var set."); sys.exit(1)
+        print("❌ No voice file and no VOICE_URL env var set.")
+        sys.exit(1)
+
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-model_id = model_id = os.environ["MODEL_ID"]
+model_id = os.environ["MODEL_ID"]
 print(f"⏳ Loading Model {model_id} on {device}...")
 model = Qwen3TTSModel.from_pretrained(
     model_id, 
     dtype=torch.float16, 
     device_map=device
-    )
+)
+
 
 print("⏳ Loading Voice...")
 voice_data = safetensors.torch.load_file(VOICE_FILE)
-prompt = {}
 
+# Debug: Print what's actually in the file
+print(f"📋 Safetensors keys: {list(voice_data.keys())}")
+for k, v in voice_data.items():
+    if isinstance(v, torch.Tensor):
+        print(f"  {k}: shape={v.shape}, dtype={v.dtype}")
+
+# Build prompt dictionary - transfer tensors to device
+prompt = {}
 for k, v in voice_data.items():
     if isinstance(v, torch.Tensor):
         v = v.to(device)
+        # Only add batch dimension if it's missing (ndim == 1 or 2 depending on tensor)
+        # The model expects specific shapes, so avoid over-wrapping
         if v.ndim == 1:
             v = v.unsqueeze(0)
-    
-    if k == "ref_code" or k == "ref_spk_embedding":
-        prompt[k] = [v]
-    else:
-        prompt[k] = v
+    # Don't wrap in lists - keep as direct tensor/value assignments
+    prompt[k] = v
 
-prompt["prompt_text"] = ["""The Lost Key
-Leo was a quiet boy who lived in a small house near the forest. Every morning, he walked to the old oak tree to read his favorite book. One sunny Tuesday, Leo reached into his pocket and felt a cold shiver. His house key was gone."""]
+# REMOVED: Do not add prompt_text, x_vector_only_mode, or icl_mode here
+# These should either be in your safetensors file or handled by the model
 
-if "x_vector_only_mode" not in prompt:
-    prompt["x_vector_only_mode"] = [False]
-if "icl_mode" not in prompt:
-    prompt["icl_mode"] = [False]
+print(f"✅ Loaded voice prompt with keys: {list(prompt.keys())}")
 
-print(f"✅ Loaded voice prompt keys: {list(prompt.keys())}")
 
 app = FastAPI()
-class Req(BaseModel): text: str
+class Req(BaseModel): 
+    text: str
+
 
 @app.post("/tts")
 def tts(r: Req):
     try:
-        print(f"Received text: {r.text}")  # Debug
+        print(f"📝 Received text: {r.text}")
         with torch.no_grad():
             wavs, sr = model.generate_voice_clone(
                 voice_clone_prompt=prompt,
@@ -77,13 +89,14 @@ def tts(r: Req):
             buf = io.BytesIO()
             sf.write(buf, audio, sr, format="WAV")
             buf.seek(0)
-            print(f"Generated {len(audio)} samples at {sr}Hz")  # Debug
+            print(f"✅ Generated {len(audio)} samples at {sr}Hz")
             return StreamingResponse(buf, media_type="audio/wav")
     except Exception as e:
-        print(f"ERROR: {e}")  # Questo apparirà nei log Docker
+        print(f"❌ ERROR: {e}")
         import traceback
-        traceback.print_exc()  # Stack trace completo
+        traceback.print_exc()
         raise HTTPException(500, str(e))
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
