@@ -55,18 +55,13 @@ prompt = {}
 for k, v in voice_data.items():
     if isinstance(v, torch.Tensor):
         v = v.to(device)
-        # Add batch dimension for 1D tensors
         if v.ndim == 1:
             v = v.unsqueeze(0)
-        # Add batch dimension for 2D tensors (like ref_code)
         elif v.ndim == 2:
             v = v.unsqueeze(0)
     prompt[k] = v
 
-# CRITICAL FIX: Set x_vector_only_mode to True
-# This tells the model to use ONLY the speaker embedding (ref_spk_embedding)
-# If False, it requires ref_prompts/ref_text which your safetensors doesn't have
-prompt["x_vector_only_mode"] = [True]  # Changed from False to True
+prompt["x_vector_only_mode"] = [True] 
 prompt["icl_mode"] = [False]
 
 print(f"✅ Loaded voice prompt with keys: {list(prompt.keys())}")
