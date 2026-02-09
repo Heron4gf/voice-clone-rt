@@ -37,19 +37,24 @@ model = Qwen3TTSModel.from_pretrained(
 print("⏳ Loading Voice...")
 voice_data = safetensors.torch.load_file(VOICE_FILE)
 prompt = {}
+
 for k, v in voice_data.items():
     if isinstance(v, torch.Tensor):
         v = v.to(device)
         if v.ndim == 1:
             v = v.unsqueeze(0)
-    prompt[k] = v
+    
+    if k == "ref_code" or k == "ref_spk_embedding":
+        prompt[k] = [v]
+    else:
+        prompt[k] = v
 
 if "x_vector_only_mode" not in prompt:
     prompt["x_vector_only_mode"] = [False]
 if "icl_mode" not in prompt:
     prompt["icl_mode"] = [False]
 
-print(f"✅ Loaded voice prompt with keys: {list(prompt.keys())}")
+print(f"✅ Loaded voice prompt keys: {list(prompt.keys())}")
 
 
 app = FastAPI()
