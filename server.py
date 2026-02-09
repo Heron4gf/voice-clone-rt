@@ -63,13 +63,14 @@ for k, v in voice_data.items():
             v = v.unsqueeze(0)
     prompt[k] = v
 
-# Add required mode flags - these are needed by the model
-if "x_vector_only_mode" not in prompt:
-    prompt["x_vector_only_mode"] = [False]
-if "icl_mode" not in prompt:
-    prompt["icl_mode"] = [False]
+# CRITICAL FIX: Set x_vector_only_mode to True
+# This tells the model to use ONLY the speaker embedding (ref_spk_embedding)
+# If False, it requires ref_prompts/ref_text which your safetensors doesn't have
+prompt["x_vector_only_mode"] = [True]  # Changed from False to True
+prompt["icl_mode"] = [False]
 
 print(f"✅ Loaded voice prompt with keys: {list(prompt.keys())}")
+print(f"⚙️  x_vector_only_mode=True (using speaker embedding only)")
 
 
 app = FastAPI()
