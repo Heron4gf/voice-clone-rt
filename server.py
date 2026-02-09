@@ -45,26 +45,29 @@ model = Qwen3TTSModel.from_pretrained(
 print("⏳ Loading Voice...")
 voice_data = safetensors.torch.load_file(VOICE_FILE)
 
-# Debug: Print what's actually in the file
 print(f"📋 Safetensors keys: {list(voice_data.keys())}")
 for k, v in voice_data.items():
     if isinstance(v, torch.Tensor):
         print(f"  {k}: shape={v.shape}, dtype={v.dtype}")
 
-# Build prompt dictionary - transfer tensors to device
+# Build prompt dictionary
 prompt = {}
 for k, v in voice_data.items():
     if isinstance(v, torch.Tensor):
         v = v.to(device)
-        # Only add batch dimension if it's missing (ndim == 1 or 2 depending on tensor)
-        # The model expects specific shapes, so avoid over-wrapping
+        # Add batch dimension for 1D tensors
         if v.ndim == 1:
             v = v.unsqueeze(0)
-    # Don't wrap in lists - keep as direct tensor/value assignments
+        # Add batch dimension for 2D tensors (like ref_code)
+        elif v.ndim == 2:
+            v = v.unsqueeze(0)
     prompt[k] = v
 
-# REMOVED: Do not add prompt_text, x_vector_only_mode, or icl_mode here
-# These should either be in your safetensors file or handled by the model
+# Add required mode flags - these are needed by the model
+if "x_vector_only_mode" not in prompt:
+    prompt["x_vector_only_mode"] = [False]
+if "icl_mode" not in prompt:
+    prompt["icl_mode"] = [False]
 
 print(f"✅ Loaded voice prompt with keys: {list(prompt.keys())}")
 
