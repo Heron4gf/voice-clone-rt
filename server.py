@@ -36,7 +36,13 @@ model = Qwen3TTSModel.from_pretrained(
 
 print("⏳ Loading Voice...")
 voice_data = safetensors.torch.load_file(VOICE_FILE)
-prompt = {k: (v.to(device) if isinstance(v, torch.Tensor) else v) for k, v in voice_data.items()}
+prompt = {}
+for k, v in voice_data.items():
+    if isinstance(v, torch.Tensor):
+        v = v.to(device)
+        if v.ndim == 1:
+            v = v.unsqueeze(0)
+    prompt[k] = v
 
 if "x_vector_only_mode" not in prompt:
     prompt["x_vector_only_mode"] = [False]
